@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}PDF Toolkit — All PDF Tools{% endblock %}
+
+{% block content %}
+<section class="hero">
+    <h1>Every PDF tool you need</h1>
+    <p>Merge, split, compress, convert, and now edit PDFs directly in the browser.</p>
+</section>
+
+<section class="featured-callout">
+    <div>
+        <h2>New: Add PDF editor</h2>
+        <p>Open a PDF, click text or object tools, place edits directly on the page, then download the final file.</p>
+    </div>
+    <a href="/tool/add-pdf" class="btn btn-primary">Open Add PDF</a>
+</section>
+
+<section class="tool-grid">
+    {% for tool in tools %}
+    <a href="/tool/{{ tool.id }}" class="tool-card" style="--card-color: {{ tool.color }}">
+        <div class="tool-icon">{{ tool.icon }}</div>
+        <h3>{{ tool.name }}</h3>
+        <p>{{ tool.desc }}</p>
+    </a>
+    {% endfor %}
+</section>
+{% endblock %}

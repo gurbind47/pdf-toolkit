@@ -1,0 +1,34 @@
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*.egg-info/
+.Python
+build/
+dist/
+
+# ---- Virtual environment (large, must NOT be committed) ----
+.venv/
+venv/
+env/
+
+# ---- Local editor / tooling config ----
+.claude/
+.vscode/
+.idea/
+
+# ---- macOS ----
+.DS_Store
+
+# ---- Working folders: keep the folder, ignore user files inside ----
+Input/*
+Output/*
+temp/*
+!Input/.gitkeep
+!Output/.gitkeep
+!temp/.gitkeep
+
+# ---- Logs / misc ----
+*.log
+
+# Stray macOS screenshots dropped into the project root
+Screenshot*.png

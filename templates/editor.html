@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+{% block title %}{{ tool.name }} — PDF Toolkit{% endblock %}
+
+{% block content %}
+<div class="tool-header" style="--card-color: {{ tool.color }}">
+    <div class="tool-icon-lg">{{ tool.icon }}</div>
+    <div>
+        <h1>{{ tool.name }}</h1>
+        <p>{{ tool.desc }}</p>
+    </div>
+</div>
+
+<div class="editor-shell" id="toolBody" data-tool="{{ tool.id }}" data-accept="{{ tool.accept }}">
+    <aside class="editor-sidebar">
+        <div class="options-panel">
+            <h3>Open PDF</h3>
+            <div class="dropzone editor-dropzone" id="dropzone">
+                <div class="dropzone-content">
+                    <div class="dropzone-icon">+</div>
+                    <p>Drag &amp; drop a PDF here or <label for="fileInput" class="file-label">browse files</label></p>
+                    <input type="file" id="fileInput" accept=".pdf" hidden>
+                    <small>One PDF at a time</small>
+                </div>
+            </div>
+            <div class="editor-status" id="editorStatus">Upload a PDF to begin.</div>
+        </div>
+
+        <div class="options-panel hidden" id="selectedPagePanel">
+            <h3>Selected Page</h3>
+            <div id="selectedPageInfo" class="editor-page-info"></div>
+            <div id="selectedElementList" class="editor-element-list"></div>
+        </div>
+
+        <div class="options-panel hidden" id="textPanel">
+            <h3>Add Text</h3>
+            <p class="editor-hint">Click near existing text to auto-match its font, size, and placement.</p>
+            <label>Text</label>
+            <input type="text" id="textValue" class="input-field" placeholder="Type text here">
+            <div class="options-row">
+                <div>
+                    <label>Font</label>
+                    <select id="textFont" class="input-field">
+                        <option value="Helvetica">Helvetica</option>
+                        <option value="Helvetica-Bold">Helvetica Bold</option>
+                        <option value="Helvetica-Oblique">Helvetica Italic</option>
+                        <option value="Times-Roman">Times Roman</option>
+                        <option value="Times-Bold">Times Bold</option>
+                        <option value="Courier">Courier</option>
+                    </select>
+                </div>
+                <div>
+                    <label>Size</label>
+                    <input type="number" id="textSize" class="input-field" value="14" min="6" max="96">
+                </div>
+                <div>
+                    <label>Color</label>
+                    <input type="color" id="textColor" class="input-color" value="#111111">
+                </div>
+            </div>
+            <div class="options-row">
+                <div>
+                    <label>Align</label>
+                    <select id="textAlign" class="input-field">
+                        <option value="left">Left</option>
+                        <option value="center">Center</option>
+                        <option value="right">Right</option>
+                    </select>
+                </div>
+                <div>
+                    <label>Placement width %</label>
+                    <input type="number" id="textWidth" class="input-field" value="30" min="1" max="100">
+                </div>
+            </div>
+            <button class="btn btn-primary editor-action-btn" id="startTextPlacement">Click page to place text</button>
+        </div>
+
+        <div class="options-panel hidden" id="signaturePanel">
+            <h3>Signature</h3>
+            <label>Draw a signature</label>
+            <canvas id="signatureCanvas" width="320" height="140" class="signature-pad"></canvas>
+            <div class="editor-actions">
+                <button class="btn btn-secondary" id="clearSignature">Clear</button>
+                <button class="btn btn-primary" id="useSignature">Use drawn signature</button>
+            </div>
+            <label>Or upload a signature image</label>
+            <input type="file" id="signatureFile" class="input-field" accept="image/*">
+            <div class="options-row">
+                <div>
+                    <label>Width %</label>
+                    <input type="number" id="signatureWidth" class="input-field" value="22" min="1" max="100">
+                </div>
+                <div>
+                    <label>Height %</label>
+                    <input type="number" id="signatureHeight" class="input-field" value="10" min="1" max="100">
+                </div>
+            </div>
+            <button class="btn btn-primary editor-action-btn" id="startSignaturePlacement">Click page to place signature</button>
+        </div>
+
+        <div class="options-panel hidden" id="imagePanel">
+            <h3>Add Image</h3>
+            <label>Image file</label>
+            <input type="file" id="imageFile" class="input-field" accept="image/*">
+            <div class="options-row">
+                <div>
+                    <label>Width %</label>
+                    <input type="number" id="imageWidth" class="input-field" value="25" min="1" max="100">
+                </div>
+                <div>
+                    <label>Height %</label>
+                    <input type="number" id="imageHeight" class="input-field" value="15" min="1" max="100">
+                </div>
+            </div>
+            <button class="btn btn-primary editor-action-btn" id="startImagePlacement">Click page to place image</button>
+        </div>
+
+        <div class="options-panel hidden" id="redactionPanel">
+            <h3>Redaction</h3>
+            <div class="options-row">
+                <div>
+                    <label>Width %</label>
+                    <input type="number" id="redactWidth" class="input-field" value="24" min="1" max="100">
+                </div>
+                <div>
+                    <label>Height %</label>
+                    <input type="number" id="redactHeight" class="input-field" value="8" min="1" max="100">
+                </div>
+            </div>
+            <div class="options-row">
+                <div>
+                    <label>Fill</label>
+                    <input type="color" id="redactColor" class="input-color" value="#ffffff">
+                </div>
+            </div>
+            <button class="btn btn-primary editor-action-btn" id="startRedactionPlacement">Click page to cover content</button>
+        </div>
+
+        <div class="options-panel">
+            <h3>Tools</h3>
+            <div class="tool-switcher">
+                <button class="tool-chip is-active" data-tool-panel="textPanel">Text</button>
+                <button class="tool-chip" data-tool-panel="signaturePanel">Signature</button>
+                <button class="tool-chip" data-tool-panel="imagePanel">Image</button>
+                <button class="tool-chip" data-tool-panel="redactionPanel">Redaction</button>
+            </div>
+            <div class="editor-history">
+                <button class="btn btn-secondary" id="undoBtn" type="button">Undo</button>
+                <button class="btn btn-secondary" id="redoBtn" type="button">Redo</button>
+            </div>
+            <button class="btn btn-primary editor-save-btn" id="savePdfBtn">Save edited PDF</button>
+            <button class="btn btn-secondary editor-reset-btn" id="resetEditorBtn">Reset</button>
+        </div>
+    </aside>
+
+    <section class="editor-main">
+        <div class="options-panel hidden" id="workspacePanel">
+            <h3>Pages</h3>
+            <div class="editor-hint">Drag pages to reorder. Use the page controls to rotate or remove pages. Click a page, then place text, an image, a signature, or a redaction box.</div>
+            <div class="page-grid editor-page-grid" id="pageGrid"></div>
+        </div>
+
+        <div class="result-box hidden" id="editorResult">
+            <div class="result-icon">&#10003;</div>
+            <h3>Done!</h3>
+            <p id="resultMsg">Your edited PDF is ready.</p>
+            <a id="downloadLink" class="btn btn-primary" download>Download</a>
+            <button class="btn btn-secondary" id="newFileBtn">Open another PDF</button>
+        </div>
+    </section>
+</div>
+
+<div class="back-link">
+    <a href="/">&larr; All tools</a>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/editor.js') }}"></script>
+{% endblock %}
