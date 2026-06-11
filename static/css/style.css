@@ -787,3 +787,82 @@ body {
     font-size: 12px;
     line-height: 1.45;
 }
+
+/* ===== v2: Edit Text editor ===== */
+.te-span {
+    position: absolute;
+    cursor: text;
+    border-radius: 2px;
+}
+.te-span:hover {
+    outline: 1.5px solid rgba(59, 130, 246, .75);
+    background: rgba(59, 130, 246, .08);
+}
+.te-span.te-edited {
+    background: #fff;
+    outline: 1.5px solid rgba(22, 163, 74, .8);
+    overflow: hidden;
+    white-space: nowrap;
+    line-height: 1.05;
+}
+.te-span.te-deleted {
+    background: rgba(239, 68, 68, .12);
+    outline: 1.5px solid rgba(239, 68, 68, .7);
+}
+.te-span.te-deleted::after {
+    content: "";
+    position: absolute;
+    left: 0; right: 0; top: 50%;
+    border-top: 2px solid rgba(239, 68, 68, .85);
+}
+.te-edit-wrap {
+    position: absolute;
+    z-index: 20;
+}
+.te-edit-input {
+    box-sizing: border-box;
+    width: 100%;
+    border: 2px solid var(--primary);
+    border-radius: 3px;
+    background: #fff;
+    padding: 1px 3px;
+    box-shadow: var(--shadow);
+}
+.te-edit-input:focus { outline: none; }
+.te-toolbar {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    margin-top: 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    box-shadow: var(--shadow);
+    padding: 5px 8px;
+    font-size: 11px;
+    white-space: nowrap;
+    z-index: 21;
+}
+.te-toolbar label { display: flex; align-items: center; gap: 4px; color: var(--text-muted); }
+.te-toolbar .te-size { width: 52px; padding: 2px 4px; border: 1px solid var(--border); border-radius: 4px; }
+.te-toolbar .te-color { width: 26px; height: 22px; padding: 0; border: 1px solid var(--border); border-radius: 4px; }
+.te-toolbar .te-delete {
+    border: 1px solid #fca5a5;
+    background: #fef2f2;
+    color: #b91c1c;
+    border-radius: 4px;
+    padding: 3px 8px;
+    cursor: pointer;
+    font-size: 11px;
+}
+.te-toolbar .te-delete:hover { background: #fee2e2; }
+.te-ocr-banner {
+    background: #fffbeb;
+    border-bottom: 1px solid #fbbf24;
+    color: #92400e;
+    font-size: 11px;
+    padding: 5px 10px;
+}

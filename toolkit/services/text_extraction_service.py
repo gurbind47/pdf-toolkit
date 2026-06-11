@@ -140,6 +140,127 @@ def _ocr_page(pdf_path: str, page_index: int) -> list[dict[str, Any]]:
     return items
 
 
+def _map_span_to_base14(font_name: str | None, flags: int) -> str:
+    """Map an embedded font to the closest fitz base-14 shortcut code."""
+    name = (font_name or "").lower()
+    mono = bool(flags & 8) or "courier" in name or "mono" in name
+    serif = bool(flags & 4) or any(s in name for s in ("times", "serif", "georgia", "garamond", "book"))
+    bold = bool(flags & 16) or any(s in name for s in ("bold", "black", "heavy", "semibold"))
+    italic = bool(flags & 2) or "italic" in name or "oblique" in name
+
+    if mono:
+        family = ("cour", "cobo", "coit", "cobi")
+    elif serif:
+        family = ("tiro", "tibo", "tiit", "tibi")
+    else:
+        family = ("helv", "hebo", "heit", "hebi")
+
+    if bold and italic:
+        return family[3]
+    if italic:
+        return family[2]
+    if bold:
+        return family[1]
+    return family[0]
+
+
+def _ocr_edit_spans(pdf_path: str, page_index: int, page_label: int) -> list[dict[str, Any]]:
+    """OCR fallback for extract_edit_spans — word boxes in page percentages."""
+    pdf = pdfium.PdfDocument(pdf_path)
+    try:
+        page = pdf[page_index]
+        page_width = float(page.get_width()) or 1.0
+        page_height = float(page.get_height()) or 1.0
+        image = page.render(scale=2.0).to_pil()
+    finally:
+        pdf.close()
+
+    spans: list[dict[str, Any]] = []
+    for s_index, word in enumerate(run_tesseract_tsv(image)):
+        left = word["left"] / 2.0
+        top = word["top"] / 2.0
+        width = word["width"] / 2.0
+        height = word["height"] / 2.0
+        spans.append({
+            "id": f"p{page_label}_s{s_index}",
+            "text": word["text"],
+            "x_pct": left / page_width * 100.0,
+            "y_pct": top / page_height * 100.0,
+            "width_pct": width / page_width * 100.0,
+            "height_pct": height / page_height * 100.0,
+            "origin_x_pct": left / page_width * 100.0,
+            "origin_y_pct": (top + height * 0.8) / page_height * 100.0,
+            "font": "helv",
+            "font_raw": None,
+            "size": round(max(6.0, height * 0.9), 2),
+            "color": "#111111",
+            "source": "ocr",
+        })
+    return spans
+
+
+def extract_edit_spans(pdf_path: str, max_pages: int = 60) -> list[dict[str, Any]]:
+    """Per-page editable text spans for the Edit Text tool.
+
+    Returns [{"page": N, "source": "text-layer"|"ocr", "spans": [...]}, ...].
+    Span boxes/origins are percentages of the page rect so they map directly
+    onto the rendered page images.
+    """
+    doc = fitz.open(pdf_path)
+    pages: list[dict[str, Any]] = []
+
+    try:
+        for page_index, page in enumerate(doc):
+            if page_index >= max_pages:
+                break
+
+            pw = float(page.rect.width) or 1.0
+            ph = float(page.rect.height) or 1.0
+            spans: list[dict[str, Any]] = []
+            s_index = 0
+
+            for block in page.get_text("dict").get("blocks", []):
+                if block.get("type") != 0:
+                    continue
+                for line in block.get("lines", []):
+                    for span in line.get("spans", []):
+                        text = span.get("text") or ""
+                        if not text.strip():
+                            continue
+                        bbox = span.get("bbox")
+                        if not bbox:
+                            continue
+                        x0, y0, x1, y1 = bbox
+                        ox, oy = span.get("origin", (x0, y1))
+                        spans.append({
+                            "id": f"p{page_index + 1}_s{s_index}",
+                            "text": text,
+                            "x_pct": x0 / pw * 100.0,
+                            "y_pct": y0 / ph * 100.0,
+                            "width_pct": (x1 - x0) / pw * 100.0,
+                            "height_pct": (y1 - y0) / ph * 100.0,
+                            "origin_x_pct": ox / pw * 100.0,
+                            "origin_y_pct": oy / ph * 100.0,
+                            "font": _map_span_to_base14(span.get("font"), int(span.get("flags") or 0)),
+                            "font_raw": span.get("font"),
+                            "size": round(float(span.get("size") or 11), 2),
+                            "color": f"#{(span.get('color') or 0) & 0xFFFFFF:06x}",
+                            "source": "text-layer",
+                        })
+                        s_index += 1
+
+            source = "text-layer"
+            if not spans:
+                spans = _ocr_edit_spans(pdf_path, page_index, page_index + 1)
+                source = "ocr"
+
+            pages.append({"page": page_index + 1, "source": source, "spans": spans})
+    finally:
+        doc.close()
+
+    return pages
+
+
 def extract_text_items(pdf_path: str, max_pages: int = 100) -> list[list[dict[str, Any]]]:
     doc = fitz.open(pdf_path)
     pages: list[list[dict[str, Any]]] = []

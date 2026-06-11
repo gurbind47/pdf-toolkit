@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}{{ tool.name }} — PDF Toolkit{% endblock %}
+
+{% block content %}
+<div class="tool-header" style="--card-color: {{ tool.color }}">
+    <div class="tool-icon-lg">{{ tool.icon }}</div>
+    <div>
+        <h1>{{ tool.name }}</h1>
+        <p>{{ tool.desc }}</p>
+    </div>
+</div>
+
+<div class="editor-shell" id="toolBody" data-tool="{{ tool.id }}" data-accept="{{ tool.accept }}">
+    <aside class="editor-sidebar">
+        <div class="options-panel">
+            <h3>Open PDF</h3>
+            <div class="dropzone editor-dropzone" id="dropzone">
+                <div class="dropzone-content">
+                    <div class="dropzone-icon">+</div>
+                    <p>Drag &amp; drop a PDF here or <label for="fileInput" class="file-label">browse files</label></p>
+                    <input type="file" id="fileInput" accept=".pdf" hidden>
+                    <small>One PDF at a time</small>
+                </div>
+            </div>
+            <div class="editor-status" id="editorStatus">Upload a PDF to begin.</div>
+        </div>
+
+        <div class="options-panel hidden" id="editsPanel">
+            <h3>Pending Changes</h3>
+            <p class="editor-hint">Click any text on the page to edit it. Enter saves the change, Esc cancels.</p>
+            <div class="editor-element-list" id="editsList"></div>
+            <div class="editor-history">
+                <button class="btn btn-secondary" id="undoBtn" type="button">Undo</button>
+                <button class="btn btn-secondary" id="redoBtn" type="button">Redo</button>
+            </div>
+            <button class="btn btn-primary editor-save-btn" id="saveBtn" type="button">Save edited PDF</button>
+            <button class="btn btn-secondary editor-reset-btn" id="resetBtn" type="button">Reset</button>
+            <p class="editor-hint">Replaced text uses the closest standard PDF font — it will look close to the original, not always identical.</p>
+        </div>
+    </aside>
+
+    <section class="editor-main">
+        <div class="options-panel hidden" id="pagesPanel">
+            <h3>Pages</h3>
+            <div class="ff-page-list" id="tePages"></div>
+        </div>
+
+        <div class="result-box hidden" id="editorResult">
+            <div class="result-icon">&#10003;</div>
+            <h3>Done!</h3>
+            <p id="resultMsg">Your edited PDF is ready.</p>
+            <a id="downloadLink" class="btn btn-primary" download>Download</a>
+            <button class="btn btn-secondary" id="newFileBtn" type="button">Open another PDF</button>
+        </div>
+    </section>
+</div>
+
+<div class="back-link">
+    <a href="/">&larr; All tools</a>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/text_editor.js') }}"></script>
+{% endblock %}
