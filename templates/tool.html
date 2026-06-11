@@ -168,6 +168,128 @@
             <h3>Enter Password</h3>
             <input type="password" id="unlockPw" placeholder="Enter current password" class="input-field">
         </div>
+
+        {% elif tool.id == 'pdf-to-word' %}
+        <div class="options-panel">
+            <h3>PDF to Word</h3>
+            <p>Converts text-based PDFs into an editable Word (.docx) document, keeping layout and tables where possible. Scanned PDFs should go through the <a href="/tool/ocr">OCR PDF</a> tool first.</p>
+        </div>
+
+        {% elif tool.id == 'pdf-to-excel' %}
+        <div class="options-panel">
+            <h3>Table Layout</h3>
+            <div class="option-group">
+                <label><input type="radio" name="xlsLayout" value="sheets" checked> One worksheet per table</label>
+                <label><input type="radio" name="xlsLayout" value="single"> Everything on one worksheet</label>
+            </div>
+            <p>Detects tables on each page and exports them to Excel. Tables without visible grid lines may not be detected.</p>
+        </div>
+
+        {% elif tool.id == 'pdf-to-powerpoint' %}
+        <div class="options-panel">
+            <h3>Slide Quality</h3>
+            <label>Image DPI:</label>
+            <select id="pptDpi" class="input-field">
+                <option value="96">96 (Smaller file)</option>
+                <option value="150" selected>150 (Balanced)</option>
+                <option value="200">200 (Sharper)</option>
+            </select>
+            <p>Each PDF page becomes one slide.</p>
+        </div>
+
+        {% elif tool.id == 'ocr' %}
+        <div class="options-panel">
+            <h3>OCR Settings</h3>
+            <div class="options-row">
+                <div>
+                    <label>Language:</label>
+                    <select id="ocrLang" class="input-field">
+                        <option value="eng" selected>English</option>
+                        <option value="fra">French</option>
+                        <option value="eng+fra">English + French</option>
+                    </select>
+                </div>
+            </div>
+            <label><input type="checkbox" id="ocrForce"> Force OCR all pages (redo pages that already have text)</label>
+            <p>Adds an invisible text layer to scanned pages so the PDF becomes searchable and copy-pasteable. The page images stay untouched.</p>
+        </div>
+
+        {% elif tool.id == 'crop' %}
+        <div class="options-panel">
+            <h3>Crop Area</h3>
+            <p>Drag or resize the rectangle on the preview, or type margins below.</p>
+            <div class="crop-preview-wrap hidden" id="cropPreviewWrap">
+                <img id="cropPreviewImg" alt="Page preview">
+                <div class="crop-rect" id="cropRectEl">
+                    <span class="crop-handle nw"></span>
+                    <span class="crop-handle ne"></span>
+                    <span class="crop-handle sw"></span>
+                    <span class="crop-handle se"></span>
+                </div>
+            </div>
+            <div class="options-row">
+                <div>
+                    <label>Top (pt):</label>
+                    <input type="number" id="cropTop" value="0" min="0" class="input-field">
+                </div>
+                <div>
+                    <label>Bottom (pt):</label>
+                    <input type="number" id="cropBottom" value="0" min="0" class="input-field">
+                </div>
+                <div>
+                    <label>Left (pt):</label>
+                    <input type="number" id="cropLeft" value="0" min="0" class="input-field">
+                </div>
+                <div>
+                    <label>Right (pt):</label>
+                    <input type="number" id="cropRight" value="0" min="0" class="input-field">
+                </div>
+            </div>
+            <label>Pages (blank = all):</label>
+            <input type="text" id="cropPages" placeholder="e.g. 1-3, 5" class="input-field">
+        </div>
+
+        {% elif tool.id == 'repair' %}
+        <div class="options-panel">
+            <h3>Repair PDF</h3>
+            <p>Rebuilds the file structure to fix PDFs that fail to open, show errors, or behave oddly. Page content is kept as-is.</p>
+        </div>
+
+        {% elif tool.id == 'metadata' %}
+        <div class="options-panel">
+            <h3>Document Properties</h3>
+            <div class="options-row">
+                <div>
+                    <label>Title:</label>
+                    <input type="text" id="mdTitle" class="input-field">
+                </div>
+                <div>
+                    <label>Author:</label>
+                    <input type="text" id="mdAuthor" class="input-field">
+                </div>
+            </div>
+            <div class="options-row">
+                <div>
+                    <label>Subject:</label>
+                    <input type="text" id="mdSubject" class="input-field">
+                </div>
+                <div>
+                    <label>Keywords:</label>
+                    <input type="text" id="mdKeywords" class="input-field">
+                </div>
+            </div>
+            <div class="options-row">
+                <div>
+                    <label>Creator app:</label>
+                    <input type="text" id="mdCreator" class="input-field">
+                </div>
+                <div>
+                    <label>Producer:</label>
+                    <input type="text" id="mdProducer" class="input-field">
+                </div>
+            </div>
+            <label><input type="checkbox" id="mdStripAll"> Remove ALL metadata, including hidden XMP data (overrides the fields above)</label>
+        </div>
         {% endif %}
 
         <button class="btn btn-primary" id="processBtn">
@@ -197,4 +319,6 @@
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/upload.js') }}"></script>
 <script src="{{ url_for('static', filename='js/organize.js') }}"></script>
+<script src="{{ url_for('static', filename='js/crop.js') }}"></script>
+<script src="{{ url_for('static', filename='js/metadata.js') }}"></script>
 {% endblock %}

@@ -23,6 +23,50 @@
 
     let files = [];
 
+    /* ---- Thumbnail state ---- */
+    let objectUrls = [];          // image preview URLs to revoke
+    let sortableInstance = null;  // single Sortable instance for the grid
+    const fetchQueue = [];        // PDFs waiting for a first-page thumbnail
+    let activeFetches = 0;
+    const MAX_FETCH = 4;          // cap concurrent thumbnail requests
+
+    const IMG_EXTS = ['.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.tif', '.gif', '.webp'];
+
+    const thumbObserver = ('IntersectionObserver' in window)
+        ? new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    thumbObserver.unobserve(entry.target);
+                    queuePdfThumb(entry.target._file);
+                }
+            });
+        }, { rootMargin: '300px' })
+        : null;
+
+    function escapeHtml(s) {
+        return String(s).replace(/[&<>"']/g, c => (
+            { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+        ));
+    }
+
+    function fileExt(f) {
+        const name = (f.name || '').toLowerCase();
+        const dot = name.lastIndexOf('.');
+        return dot > -1 ? name.slice(dot) : '';
+    }
+
+    function fileKind(f) {
+        const ext = fileExt(f);
+        if ((f.type && f.type.startsWith('image/')) || IMG_EXTS.includes(ext)) return 'image';
+        if (f.type === 'application/pdf' || ext === '.pdf') return 'pdf';
+        return 'other';
+    }
+
+    function extLabel(f) {
+        const ext = fileExt(f).replace('.', '').toUpperCase();
+        return ext || 'FILE';
+    }
+
     /* ---- Drag & Drop ---- */
     dropzone.addEventListener('dragover', e => {
         e.preventDefault();
@@ -60,6 +104,10 @@
 
             if (toolId === 'organize') {
                 loadPreview(files[0]);
+            } else if (toolId === 'crop' && typeof window.cropOnFile === 'function') {
+                window.cropOnFile(files[0]);
+            } else if (toolId === 'metadata' && typeof window.metadataOnFile === 'function') {
+                window.metadataOnFile(files[0]);
             }
         }
     }
@@ -77,35 +125,82 @@
         return picked;
     }
 
+    function prepareFile(f) {
+        if (f._kind) return;
+        f._kind = fileKind(f);
+        if (f._kind === 'image') {
+            f._url = URL.createObjectURL(f);
+            f._thumb = f._url;
+            f._thumbState = 'done';
+            objectUrls.push(f._url);
+        } else if (f._kind === 'pdf') {
+            f._thumbState = 'pending';
+            f._pages = 0;
+        } else {
+            f._thumbState = 'done';
+        }
+    }
+
+    function thumbInner(f) {
+        if ((f._kind === 'image' || f._kind === 'pdf') && f._thumbState === 'done' && f._thumb) {
+            return `<img src="${f._thumb}" alt="">`;
+        }
+        if (f._kind === 'pdf' && f._thumbState !== 'error') {
+            return `<div class="file-thumb-loading"><span class="spinner"></span></div>`;
+        }
+        return `<div class="file-thumb-badge">${escapeHtml(extLabel(f))}</div>`;
+    }
+
+    function metaText(f) {
+        const size = formatBytes(f.size);
+        return f._pages ? `${size} &middot; ${f._pages} pg` : size;
+    }
+
     function renderFileList() {
+        const multi = fileInput.hasAttribute('multiple');
+
+        if (sortableInstance) {
+            sortableInstance.destroy();
+            sortableInstance = null;
+        }
+
+        fileList.classList.add('file-grid');
         fileList.innerHTML = '';
-        files.forEach((f, i) => {
-            const div = document.createElement('div');
-            div.className = 'file-item';
-            div.innerHTML = `
-                ${toolId === 'merge' ? '<span class="file-item-handle">&#9776;</span>' : ''}
-                <span class="file-item-name">${f.name}</span>
-                <span class="file-item-size">${formatBytes(f.size)}</span>
-                <button class="file-item-remove" data-idx="${i}">&times;</button>
+
+        files.forEach((f) => {
+            prepareFile(f);
+
+            const tile = document.createElement('div');
+            tile.className = 'file-thumb';
+            tile._file = f;
+            tile.innerHTML = `
+                ${multi ? '<span class="file-thumb-handle" title="Drag to reorder">&#9776;</span>' : ''}
+                <button class="file-thumb-remove" title="Remove">&times;</button>
+                <div class="file-thumb-preview">${thumbInner(f)}</div>
+                <div class="file-thumb-name" title="${escapeHtml(f.name)}">${escapeHtml(f.name)}</div>
+                <div class="file-thumb-meta">${metaText(f)}</div>
             `;
-            fileList.appendChild(div);
+            fileList.appendChild(tile);
+
+            if (f._kind === 'pdf' && f._thumbState === 'pending') {
+                if (thumbObserver) thumbObserver.observe(tile);
+                else queuePdfThumb(f);
+            }
         });
 
-        fileList.querySelectorAll('.file-item-remove').forEach(btn => {
+        fileList.querySelectorAll('.file-thumb-remove').forEach(btn => {
             btn.addEventListener('click', e => {
-                const idx = parseInt(e.target.dataset.idx);
-                files.splice(idx, 1);
-                renderFileList();
-                if (files.length === 0) {
-                    showStep('stepUpload');
-                }
+                e.stopPropagation();
+                const tile = e.currentTarget.closest('.file-thumb');
+                const idx = Array.from(fileList.children).indexOf(tile);
+                if (idx > -1) removeFileAt(idx);
             });
         });
 
-        // Sortable for merge
-        if (toolId === 'merge' && typeof Sortable !== 'undefined') {
-            Sortable.create(fileList, {
-                handle: '.file-item-handle',
+        // Drag-reorder for multi-file tools
+        if (multi && typeof Sortable !== 'undefined') {
+            sortableInstance = Sortable.create(fileList, {
+                handle: '.file-thumb-handle',
                 animation: 150,
                 onEnd: (evt) => {
                     const moved = files.splice(evt.oldIndex, 1)[0];
@@ -113,6 +208,71 @@
                 }
             });
         }
+    }
+
+    function removeFileAt(idx) {
+        const f = files[idx];
+        if (f && f._url) {
+            URL.revokeObjectURL(f._url);
+            objectUrls = objectUrls.filter(u => u !== f._url);
+        }
+        files.splice(idx, 1);
+        if (files.length === 0) {
+            showStep('stepUpload');
+            fileList.innerHTML = '';
+        } else {
+            renderFileList();
+        }
+    }
+
+    /* ---- PDF thumbnail loading (lazy + throttled) ---- */
+    function queuePdfThumb(f) {
+        if (!f || f._thumbState !== 'pending') return;
+        f._thumbState = 'queued';
+        fetchQueue.push(f);
+        pumpQueue();
+    }
+
+    function pumpQueue() {
+        while (activeFetches < MAX_FETCH && fetchQueue.length) {
+            loadPdfThumb(fetchQueue.shift());
+        }
+    }
+
+    async function loadPdfThumb(f) {
+        activeFetches++;
+        f._thumbState = 'loading';
+        try {
+            const fd = new FormData();
+            fd.append('file', f);
+            const resp = await fetch('/api/thumbnail', { method: 'POST', body: fd });
+            if (!resp.ok) throw new Error('thumbnail failed');
+            const data = await resp.json();
+            f._thumb = data.thumbnail || null;
+            f._pages = data.pages || 0;
+            f._thumbState = f._thumb ? 'done' : 'error';
+        } catch (err) {
+            f._thumbState = 'error';
+        } finally {
+            activeFetches--;
+            updateTile(f);
+            pumpQueue();
+        }
+    }
+
+    function updateTile(f) {
+        const tile = Array.from(fileList.children).find(t => t._file === f);
+        if (!tile) return;
+        const preview = tile.querySelector('.file-thumb-preview');
+        if (preview) preview.innerHTML = thumbInner(f);
+        const meta = tile.querySelector('.file-thumb-meta');
+        if (meta) meta.innerHTML = metaText(f);
+    }
+
+    function revokeAll() {
+        objectUrls.forEach(u => { try { URL.revokeObjectURL(u); } catch (e) { /* noop */ } });
+        objectUrls = [];
+        fetchQueue.length = 0;
     }
 
     /* ---- Split mode toggle ---- */
@@ -281,6 +441,42 @@
             endpoint = '/api/unlock';
             formData.append('file', files[0]);
             formData.append('password', document.getElementById('unlockPw').value);
+
+        } else if (toolId === 'pdf-to-word') {
+            endpoint = '/api/pdf-to-word';
+            formData.append('file', files[0]);
+
+        } else if (toolId === 'pdf-to-excel') {
+            endpoint = '/api/pdf-to-excel';
+            formData.append('file', files[0]);
+            formData.append('layout', document.querySelector('input[name="xlsLayout"]:checked').value);
+
+        } else if (toolId === 'pdf-to-powerpoint') {
+            endpoint = '/api/pdf-to-powerpoint';
+            formData.append('file', files[0]);
+            formData.append('dpi', document.getElementById('pptDpi').value);
+
+        } else if (toolId === 'ocr') {
+            endpoint = '/api/ocr';
+            formData.append('file', files[0]);
+            formData.append('lang', document.getElementById('ocrLang').value);
+            formData.append('force', document.getElementById('ocrForce').checked);
+
+        } else if (toolId === 'crop') {
+            endpoint = '/api/crop';
+            formData.append('file', files[0]);
+            const cropOps = window.getCropOps ? window.getCropOps() : {};
+            Object.entries(cropOps).forEach(([key, value]) => formData.append(key, value));
+
+        } else if (toolId === 'repair') {
+            endpoint = '/api/repair';
+            formData.append('file', files[0]);
+
+        } else if (toolId === 'metadata') {
+            endpoint = '/api/metadata/write';
+            formData.append('file', files[0]);
+            const mdFields = window.getMetadataFields ? window.getMetadataFields() : {};
+            Object.entries(mdFields).forEach(([key, value]) => formData.append(key, value));
         }
 
         try {
@@ -316,6 +512,8 @@
     /* ---- Reset ---- */
     if (resetBtn) {
         resetBtn.addEventListener('click', () => {
+            revokeAll();
+            if (sortableInstance) { sortableInstance.destroy(); sortableInstance = null; }
             files = [];
             fileList.innerHTML = '';
             showStep('stepUpload');

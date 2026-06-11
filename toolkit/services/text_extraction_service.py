@@ -66,34 +66,30 @@ def _normalize_box(bbox: list[float] | tuple[float, float, float, float], page_w
     }
 
 
-def _ocr_page(pdf_path: str, page_index: int) -> list[dict[str, Any]]:
-    pdf = pdfium.PdfDocument(pdf_path)
-    page = pdf[page_index]
-    page_width = float(page.get_width())
-    page_height = float(page.get_height())
-    image = page.render(scale=2.0).to_pil()
-
+def run_tesseract_tsv(pil_image, lang: str = "eng", psm: int = 6, min_conf: float = 35.0) -> list[dict[str, Any]]:
+    """Run tesseract on a PIL image. Returns word boxes in image pixels:
+    [{"text", "conf", "left", "top", "width", "height"}, ...]
+    """
     with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp_image:
-        image.save(tmp_image.name)
+        pil_image.save(tmp_image.name)
         image_path = tmp_image.name
 
     try:
         proc = subprocess.run(
-            ["tesseract", image_path, "stdout", "--psm", "6", "tsv"],
+            ["tesseract", image_path, "stdout", "-l", lang, "--psm", str(psm), "tsv"],
             check=True,
             capture_output=True,
             text=True,
         )
-    except subprocess.CalledProcessError:
+    except (subprocess.CalledProcessError, FileNotFoundError):
         return []
     finally:
         try:
             os.remove(image_path)
         except Exception:
             pass
-        pdf.close()
 
-    items: list[dict[str, Any]] = []
+    words: list[dict[str, Any]] = []
     reader = csv.DictReader(proc.stdout.splitlines(), delimiter="\t")
     for row in reader:
         text = (row.get("text") or "").strip()
@@ -103,19 +99,41 @@ def _ocr_page(pdf_path: str, page_index: int) -> list[dict[str, Any]]:
             conf = float(row.get("conf") or 0)
         except ValueError:
             conf = 0.0
-        if conf < 35:
+        if conf < min_conf:
             continue
-
-        left = float(row.get("left") or 0) / 2.0
-        top = float(row.get("top") or 0) / 2.0
-        width = float(row.get("width") or 0) / 2.0
-        height = float(row.get("height") or 0) / 2.0
-        items.append({
+        words.append({
             "text": text,
+            "conf": conf,
+            "left": float(row.get("left") or 0),
+            "top": float(row.get("top") or 0),
+            "width": float(row.get("width") or 0),
+            "height": float(row.get("height") or 0),
+        })
+    return words
+
+
+def _ocr_page(pdf_path: str, page_index: int) -> list[dict[str, Any]]:
+    pdf = pdfium.PdfDocument(pdf_path)
+    try:
+        page = pdf[page_index]
+        page_width = float(page.get_width())
+        page_height = float(page.get_height())
+        image = page.render(scale=2.0).to_pil()
+    finally:
+        pdf.close()
+
+    items: list[dict[str, Any]] = []
+    for word in run_tesseract_tsv(image):
+        left = word["left"] / 2.0
+        top = word["top"] / 2.0
+        width = word["width"] / 2.0
+        height = word["height"] / 2.0
+        items.append({
+            "text": word["text"],
             "font_family": "Helvetica",
             "font_size": max(8.0, height * 0.9),
             "source": "ocr",
-            "confidence": conf,
+            "confidence": word["conf"],
             **_normalize_box((left, top, left + width, top + height), page_width, page_height),
         })
 
