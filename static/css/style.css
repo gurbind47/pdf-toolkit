@@ -699,3 +699,91 @@ body {
 .crop-handle.ne { right: -7px; top: -7px; cursor: nesw-resize; }
 .crop-handle.sw { left: -7px; bottom: -7px; cursor: nesw-resize; }
 .crop-handle.se { right: -7px; bottom: -7px; cursor: nwse-resize; }
+
+/* ===== v2: Forms editor ===== */
+.ff-page-list { display: flex; flex-direction: column; gap: 24px; }
+.ff-page {
+    position: relative;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+}
+.ff-page img { display: block; width: 100%; user-select: none; }
+.ff-overlay { position: absolute; inset: 0; touch-action: none; }
+.ff-page-label {
+    text-align: center;
+    font-size: 11px;
+    color: var(--text-muted);
+    padding: 4px 0;
+    background: #fafafa;
+    border-top: 1px solid var(--border);
+}
+.ff-input, .ff-select {
+    position: absolute;
+    box-sizing: border-box;
+    border: 1px solid rgba(79, 70, 229, .55);
+    background: rgba(79, 70, 229, .07);
+    border-radius: 2px;
+    padding: 0 3px;
+    font-family: inherit;
+    color: #111;
+}
+.ff-input:focus, .ff-select:focus {
+    outline: 2px solid var(--primary);
+    background: #fff;
+}
+.ff-check { position: absolute; margin: 0; accent-color: var(--primary); }
+.ff-required { border-color: rgba(220, 38, 38, .65); }
+.ff-sigbox {
+    position: absolute;
+    border: 1px dashed #9ca3af;
+    background: repeating-linear-gradient(45deg, rgba(156,163,175,.12), rgba(156,163,175,.12) 6px, transparent 6px, transparent 12px);
+    color: #6b7280;
+    font-size: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 2px;
+}
+.ff-flash { outline: 3px solid #f59e0b !important; transition: outline .2s; }
+.ff-box {
+    position: absolute;
+    border: 1.5px solid var(--primary);
+    background: rgba(79, 70, 229, .10);
+    cursor: move;
+    touch-action: none;
+}
+.ff-box.selected { box-shadow: 0 0 0 2px rgba(79,70,229,.25); background: rgba(79, 70, 229, .16); }
+.ff-box-tag {
+    position: absolute;
+    top: -16px;
+    left: -1px;
+    font-size: 9px;
+    line-height: 1;
+    background: var(--primary);
+    color: #fff;
+    padding: 3px 5px;
+    border-radius: 3px 3px 0 0;
+    white-space: nowrap;
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.ff-ghost {
+    position: absolute;
+    border: 1.5px dashed var(--primary);
+    background: rgba(79, 70, 229, .08);
+    pointer-events: none;
+}
+.ff-warning {
+    margin-top: 10px;
+    padding: 10px 12px;
+    border: 1px solid #fbbf24;
+    background: #fffbeb;
+    color: #92400e;
+    border-radius: 8px;
+    font-size: 12px;
+    line-height: 1.45;
+}

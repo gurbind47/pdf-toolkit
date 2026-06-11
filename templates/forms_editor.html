@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}{{ tool.name }} — PDF Toolkit{% endblock %}
+
+{% block content %}
+<div class="tool-header" style="--card-color: {{ tool.color }}">
+    <div class="tool-icon-lg">{{ tool.icon }}</div>
+    <div>
+        <h1>{{ tool.name }}</h1>
+        <p>{{ tool.desc }}</p>
+    </div>
+</div>
+
+<div class="editor-shell" id="toolBody" data-tool="{{ tool.id }}" data-accept="{{ tool.accept }}">
+    <aside class="editor-sidebar">
+        <div class="options-panel">
+            <h3>Open PDF</h3>
+            <div class="dropzone editor-dropzone" id="dropzone">
+                <div class="dropzone-content">
+                    <div class="dropzone-icon">+</div>
+                    <p>Drag &amp; drop a PDF here or <label for="fileInput" class="file-label">browse files</label></p>
+                    <input type="file" id="fileInput" accept=".pdf" hidden>
+                    <small>One PDF at a time</small>
+                </div>
+            </div>
+            <div class="editor-status" id="editorStatus">Upload a PDF to begin.</div>
+        </div>
+
+        <div class="options-panel hidden" id="modePanel">
+            <h3>Mode</h3>
+            <div class="tool-switcher">
+                <button class="tool-chip is-active" id="modeFillBtn" type="button">Fill form</button>
+                <button class="tool-chip" id="modeEditBtn" type="button">Edit fields</button>
+            </div>
+            <div class="ff-warning hidden" id="xfaWarning">
+                This is an <strong>XFA form</strong> (most IRCC IMM forms). It can only be filled in
+                Adobe Acrobat/Reader — the fields below may not match what Adobe shows, and saving is disabled.
+            </div>
+        </div>
+
+        <div class="options-panel hidden" id="fillPanel">
+            <h3>Form Fields</h3>
+            <p class="editor-hint" id="fillHint">Type directly into the fields on the page, or use this list to jump to a field.</p>
+            <div class="editor-element-list" id="fieldList"></div>
+            <label><input type="checkbox" id="flattenChk"> Flatten — make fields permanent &amp; non-editable</label>
+            <button class="btn btn-primary editor-save-btn" id="saveFilledBtn" type="button">Save filled PDF</button>
+        </div>
+
+        <div class="options-panel hidden" id="editPanel">
+            <h3>Add Fields</h3>
+            <p class="editor-hint">Pick a field type, then drag on a page to draw it. Click a field to edit its properties.</p>
+            <div class="tool-switcher" id="fieldTypeButtons">
+                <button class="tool-chip" data-field-type="text" type="button">Text</button>
+                <button class="tool-chip" data-field-type="date" type="button">Date</button>
+                <button class="tool-chip" data-field-type="checkbox" type="button">Checkbox</button>
+                <button class="tool-chip" data-field-type="radio" type="button" title="Saved as one checkbox per option">Choice group</button>
+                <button class="tool-chip" data-field-type="combobox" type="button">Dropdown</button>
+                <button class="tool-chip" data-field-type="signbox" type="button" title="A printed sign-here box (not a digital signature field)">Sign-here box</button>
+            </div>
+
+            <div class="hidden" id="fieldProps">
+                <h3>Field Properties</h3>
+                <label>Field name</label>
+                <input type="text" id="propName" class="input-field">
+                <div id="propValueWrap">
+                    <label>Default value</label>
+                    <input type="text" id="propValue" class="input-field">
+                </div>
+                <div id="propOptionsWrap" class="hidden">
+                    <label>Options (one per line)</label>
+                    <textarea id="propOptions" class="input-field" rows="3"></textarea>
+                </div>
+                <div class="options-row">
+                    <div>
+                        <label>Font size</label>
+                        <input type="number" id="propFontSize" class="input-field" value="11" min="6" max="36">
+                    </div>
+                    <div>
+                        <label style="margin-top:24px"><input type="checkbox" id="propRequired"> Required</label>
+                    </div>
+                </div>
+                <button class="btn btn-secondary" id="deleteFieldBtn" type="button">Delete field</button>
+            </div>
+
+            <button class="btn btn-primary editor-save-btn" id="saveFieldsBtn" type="button">Save fillable PDF</button>
+        </div>
+    </aside>
+
+    <section class="editor-main">
+        <div class="options-panel hidden" id="pagesPanel">
+            <h3>Pages</h3>
+            <div class="ff-page-list" id="ffPages"></div>
+        </div>
+
+        <div class="result-box hidden" id="editorResult">
+            <div class="result-icon">&#10003;</div>
+            <h3>Done!</h3>
+            <p id="resultMsg">Your PDF is ready.</p>
+            <a id="downloadLink" class="btn btn-primary" download>Download</a>
+            <button class="btn btn-secondary" id="newFileBtn" type="button">Open another PDF</button>
+        </div>
+    </section>
+</div>
+
+<div class="back-link">
+    <a href="/">&larr; All tools</a>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/forms_editor.js') }}"></script>
+{% endblock %}

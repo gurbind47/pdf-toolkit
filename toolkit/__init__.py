@@ -12,17 +12,18 @@ def create_app():
 
     from .routes import merge, split, organize, compress, watermark
     from .routes import page_numbers, convert, export, protect, preview, background_remove, add_pdf
-    from .routes import repair, metadata, pdf_to_office, ocr, crop
+    from .routes import repair, metadata, pdf_to_office, ocr, crop, forms
 
     for module in (
         merge, split, organize, compress, watermark,
         page_numbers, convert, export, protect, preview, background_remove, add_pdf,
-        repair, metadata, pdf_to_office, ocr, crop,
+        repair, metadata, pdf_to_office, ocr, crop, forms,
     ):
         app.register_blueprint(module.bp)
 
     TOOLS = [
         {"id": "add-pdf", "name": "Add PDF", "desc": "Edit text, signatures, images, and pages", "icon": "A", "color": "#0f766e", "accept": ".pdf", "template": "editor.html"},
+        {"id": "pdf-forms", "name": "PDF Forms", "desc": "Fill existing forms or build new fillable fields", "icon": "Fm", "color": "#0f766e", "accept": ".pdf", "template": "forms_editor.html"},
         {"id": "merge", "name": "Merge PDF", "desc": "Combine multiple files into one PDF", "icon": "M", "color": "#e74c3c", "accept": "*"},
         {"id": "split", "name": "Split PDF", "desc": "Separate a PDF into multiple files", "icon": "S", "color": "#e74c3c", "accept": ".pdf"},
         {"id": "organize", "name": "Organize Pages", "desc": "Reorder, rotate, and delete pages", "icon": "O", "color": "#27ae60", "accept": ".pdf"},
